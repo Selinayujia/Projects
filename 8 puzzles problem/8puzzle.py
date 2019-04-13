@@ -73,7 +73,7 @@ def input_file(filename):
         return  
     return (initial_state, blank_pos, goal)
 
-def A_star_search(curr_node,goal_config):
+def A_star_search(curr_node,goal_config,heuristic_func):
 # A* search algorithm 
     frontier = []
     explored_set = []
@@ -82,8 +82,11 @@ def A_star_search(curr_node,goal_config):
         expanded_nodes = expand(curr_node)
         new_node_list = []
         for node in expanded_nodes:
-           h_n = h_F_M_dis_Lconf(node.config, goal_config)
-           # heuristic function using manhattan sum and linear conflict
+           # choose one of the heuristic functions
+           if heuristic_func == "1":
+               h_n = h_F_M_dis(node.config, goal_config)
+           else:
+               h_n = h_F_M_dis_Lconf(node.config, goal_config)
            node.cost = node.depth + h_n  #f(n) = g(n) + h(n)
            # if the generated node in explored set, do not generate
            in_explored_set = False
@@ -312,13 +315,14 @@ def output_file(input_name,output_name,cwd,result):
 def main():                       
     input_file_name = input("Please enter your input file name (The input file need to be in your current directory):")
     output_file_name = input("Please enter your intended output file name (The output file will be generated in your current directory):")
+    heuristic_func = input("Please choose one heuristic function: enter 1 is h(n) = manhattan distance and enter 2 is h(n) = mahattan distance + 2 * linear conflicts: ")
     result = input_file(input_file_name)        # read input file
     if result != None:                          # success in opening file
         config = result[0]
         blank_pos = result[1]
         initial_state = puzzle(config,blank_pos, 0, None)# first is config, second is depth,third is parent
         goal_config = result[2]
-        result = A_star_search(initial_state, goal_config)
+        result = A_star_search(initial_state, goal_config, heuristic_func)
         print("Output generated.File name is "+ output_file_name)
         cwd = os.getcwd()                       # get the path of current directory
         if result == "failure":
