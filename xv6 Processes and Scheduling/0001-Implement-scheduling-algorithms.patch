@@ -1,0 +1,649 @@
+From a0d33b7118f343fcd334a5735b2ba6bd31019b29 Mon Sep 17 00:00:00 2001
+From: Selina Zhang <yz4184@nyu.edu>
+Date: Sun, 14 Apr 2019 21:42:49 -0400
+Subject: [PATCH] Implement scheduling algorithms
+
+---
+ .DS_Store | Bin 0 -> 18436 bytes
+ Makefile  |   8 ++
+ defs.h    |   1 +
+ param.h   |   1 +
+ proc.c    | 221 ++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ proc.h    |   9 +++
+ sanity.c  |  51 +++++++++++++
+ syscall.c |   3 +
+ syscall.h |   1 +
+ sysproc.c |  22 ++++++
+ trap.c    |  19 ++++-
+ user.h    |   3 +-
+ usys.S    |   1 +
+ 13 files changed, 331 insertions(+), 9 deletions(-)
+ create mode 100644 .DS_Store
+ create mode 100644 sanity.c
+
+diff --git a/.DS_Store b/.DS_Store
+new file mode 100644
+index 0000000000000000000000000000000000000000..6929838e9bbeb78261f16ec09aebf76b16c3333f
+GIT binary patch
+literal 18436
+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
+Z+#y)k<ej2F&zSGib!Nx9=KsI{{|`5LVIcqj
+
+literal 0
+HcmV?d00001
+
+diff --git a/Makefile b/Makefile
+index b4fd9a2..462045c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -69,6 +69,12 @@ QEMU = $(shell if which qemu > /dev/null; \
+ 	echo "***" 1>&2; exit 1)
+ endif
+ 
++ifndef SCHEDFLAG
++SCHEDFLAG = DEFAULT
++endif
++
++
++
+ CC = $(TOOLPREFIX)gcc
+ AS = $(TOOLPREFIX)gas
+ LD = $(TOOLPREFIX)ld
+@@ -77,6 +83,7 @@ OBJDUMP = $(TOOLPREFIX)objdump
+ #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+ CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -fvar-tracking -fvar-tracking-assignments -O0 -g -Wall -MD -gdwarf-2 -m32 -Werror -fno-omit-frame-pointer
+ CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
++CFLAGS += -D $(SCHEDFLAG)
+ ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
+ # FreeBSD ld wants ``elf_i386_fbsd''
+ LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
+@@ -172,6 +179,7 @@ UPROGS=\
+ 	_usertests\
+ 	_wc\
+ 	_zombie\
++	_sanity\
+ 
+ fs.img: mkfs README $(UPROGS)
+ 	./mkfs fs.img README $(UPROGS)
+diff --git a/defs.h b/defs.h
+index b47372b..6b67789 100644
+--- a/defs.h
++++ b/defs.h
+@@ -118,6 +118,7 @@ void            userinit(void);
+ int             wait(void);
+ void            wakeup(void*);
+ void            yield(void);
++int             wait_stat(int* wtime, int* rtime, int* iotime, int* status);
+ 
+ // swtch.S
+ void            swtch(struct context**, struct context*);
+diff --git a/param.h b/param.h
+index a7e90ef..b53f3d9 100644
+--- a/param.h
++++ b/param.h
+@@ -11,4 +11,5 @@
+ #define LOGSIZE      (MAXOPBLOCKS*3)  // max data blocks in on-disk log
+ #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
+ #define FSSIZE       1000  // size of file system in blocks
++#define QUANTA       5    // quanta value for part 2
+ 
+diff --git a/proc.c b/proc.c
+index fee4e95..393520d 100644
+--- a/proc.c
++++ b/proc.c
+@@ -15,6 +15,9 @@ struct {
+ static struct proc *initproc;
+ 
+ int nextpid = 1;
++int elemInQueue = 0;
++
++
+ extern void forkret(void);
+ extern void trapret(void);
+ 
+@@ -49,6 +52,15 @@ found:
+   p->pid = nextpid++;
+   release(&ptable.lock);
+ 
++
++
++  
++  
++  p->orderInQueue = elemInQueue; // this is for part2, FFR
++  // Found a space for process, create a process with a process id, so the creation of process is here
++  //creation time
++  p->ctime = ticks;
++  
+   // Allocate kernel stack.
+   if((p->kstack = kalloc()) == 0){
+     p->state = UNUSED;
+@@ -205,6 +217,17 @@ exit(void)
+     }
+   }
+ 
++
++
++  // So before jump into the next one, this is the termination of a process
++  // termination time
++  p->ttime = ticks;
++
++
++
++
++
++
+   // Jump into the scheduler, never to return.
+   proc->state = ZOMBIE;
+   sched();
+@@ -233,11 +256,14 @@ wait(void)
+         kfree(p->kstack);
+         p->kstack = 0;
+         freevm(p->pgdir);
+-        p->state = UNUSED;
+-        p->pid = 0;
+-        p->parent = 0;
+-        p->name[0] = 0;
+-        p->killed = 0;
++        // part1
++        p->ctime = 0;
++        p->ttime = 0;
++        p->rutime = 0;
++        p->retime = 0;
++        p->stime = 0;
++        p->procDuration = 0;
++        p->orderInQueue = 0;       
+         release(&ptable.lock);
+         return pid;
+       }
+@@ -262,6 +288,47 @@ wait(void)
+ //  - swtch to start running that process
+ //  - eventually that process transfers control
+ //      via swtch back to the scheduler.
++
++
++// void
++// scheduler(void)
++// {
++//   struct proc *p;
++//   int foundproc = 1;
++
++//   for(;;){
++//     // Enable interrupts on this processor.
++//     sti();
++
++//     if (!foundproc) hlt();
++
++//     foundproc = 0;
++
++//     // Loop over process table looking for process to run.
++//     acquire(&ptable.lock);
++//     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
++//       if(p->state != RUNNABLE)
++//         continue;
++
++//       // Switch to chosen process.  It is the process's job
++//       // to release ptable.lock and then reacquire it
++//       // before jumping back to us.
++//       foundproc = 1;
++//       proc = p;
++//       switchuvm(p);
++//       p->state = RUNNING;
++//       swtch(&cpu->scheduler, proc->context);
++//       switchkvm();
++
++//       // Process is done running for now.
++//       // It should have changed its p->state before coming back.
++//       proc = 0;
++//     }
++//     release(&ptable.lock);
++
++//   }
++// }
++
+ void
+ scheduler(void)
+ {
+@@ -275,9 +342,12 @@ scheduler(void)
+     if (!foundproc) hlt();
+ 
+     foundproc = 0;
++    acquire(&ptable.lock);
+ 
++    // hw4
++    #ifdef DEFAULT
+     // Loop over process table looking for process to run.
+-    acquire(&ptable.lock);
++
+     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+       if(p->state != RUNNABLE)
+         continue;
+@@ -289,6 +359,7 @@ scheduler(void)
+       proc = p;
+       switchuvm(p);
+       p->state = RUNNING;
++      p->procDuration = 0;
+       swtch(&cpu->scheduler, proc->context);
+       switchkvm();
+ 
+@@ -296,11 +367,70 @@ scheduler(void)
+       // It should have changed its p->state before coming back.
+       proc = 0;
+     }
+-    release(&ptable.lock);
++    #endif
++
++    #ifdef FRR
++    struct proc* firstP = 0;
++    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
++      if(p->state == RUNNABLE){     
++        if(firstP == 0) {
++            firstP = p;
++        }
++        else{
++          if(p->orderInQueue < firstP->orderInQueue) {  
++            firstP = p;
++          }
++        }
++      }
++    }
++    if(firstP != 0){
++      p = firstP;
++      foundproc = 1;
++      proc = p;
++      switchuvm(p);
++      p->state = RUNNING;
++      p->procDuration = 0;
++      swtch(&cpu->scheduler, proc->context);
++      switchkvm();
++      proc = 0;
++    }
++    #endif
++
++    #ifdef FCFS
++    struct proc* firstP = 0;
++    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
++      if(p->state == RUNNABLE){
++        if(firstP == 0) {
++          firstP = p;
++        }
++        else{
++          if(p->ctime < firstP->ctime) {
++            firstP = p;
++          }
++        }
++      }
++    }
++    if(firstP != 0){
++      p = firstP;
++      foundproc = 1;
++      proc = p;
++      switchuvm(p);
++      p->state = RUNNING;
++      p->procDuration = 0;
++      swtch(&cpu->scheduler, proc->context);
++      switchkvm();
++      proc = 0;
++    }
++    #endif
+ 
++    release(&ptable.lock);
++   
++    
+   }
++
+ }
+ 
++
+ // Enter scheduler.  Must hold only ptable.lock
+ // and have changed proc->state.
+ void
+@@ -470,3 +600,80 @@ procdump(void)
+     cprintf("\n");
+   }
+ }
++
++
++void updateByTick(void){
++  struct proc* p;
++  acquire(&ptable.lock);
++  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
++    if(p->state == RUNNING){
++      p->rutime++;
++      p->procDuration++;   
++    } 
++    if(p->state == RUNNABLE){
++      p->retime++;
++    } 
++    if(p->state == SLEEPING){
++      p->stime++;
++    }
++  }
++  release(&ptable.lock);
++}
++
++
++
++int wait_stat(int* wtime, int* rtime, int* iotime, int* status){
++  struct proc *p;
++  int havekids, pid;
++
++
++  acquire(&ptable.lock);
++  for(;;){
++    // Scan through table looking for zombie children.
++    havekids = 0;
++    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
++      if(p->parent != proc)
++        continue;
++      havekids = 1;
++      if(p->state == ZOMBIE){
++        // hw4
++        *wtime = p->retime;
++        *rtime = p->rutime;
++        *iotime = p->stime;
++        // Found one.
++        pid = p->pid;
++        kfree(p->kstack);
++        p->kstack = 0;
++        freevm(p->pgdir);
++        p->state = UNUSED;
++        p->pid = 0;
++        p->parent = 0;
++        p->name[0] = 0;
++        p->killed = 0;
++        //part 1
++        p->ctime = 0;
++        p->ttime = 0;
++        p->rutime = 0;
++        p->retime = 0;
++        p->stime = 0;
++        p->procDuration = 0;
++        p->orderInQueue = 0;       
++        *status = pid;
++
++
++        release(&ptable.lock);
++        return pid;
++      }
++    }
++
++    // No point waiting if we don't have any children.
++    if(!havekids || proc->killed){
++      *status = -1;
++      release(&ptable.lock);
++      return -1;
++    }
++
++    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
++    sleep(proc, &ptable.lock);  //DOC: wait-sleep
++  }
++}
+\ No newline at end of file
+diff --git a/proc.h b/proc.h
+index 3b9c3ac..716cdfb 100644
+--- a/proc.h
++++ b/proc.h
+@@ -53,6 +53,15 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+ 
+ // Per-process state
+ struct proc {
++  uint ctime;                  // part1 Creation time
++  uint ttime;                  // part1 Termination time
++  uint stime;                  // part1 Sleeping time
++  uint retime;                 // part1 Ready time
++  uint rutime;                 // part1 Running time
++  int procDuration;           // this is used to see if the proc's duration in between quanta
++  int orderInQueue;            // this is used for FFR
++
++
+   uint sz;                     // Size of process memory (bytes)
+   pde_t* pgdir;                // Page table
+   char *kstack;                // Bottom of kernel stack for this process
+diff --git a/sanity.c b/sanity.c
+new file mode 100644
+index 0000000..ee17bf4
+--- /dev/null
++++ b/sanity.c
+@@ -0,0 +1,51 @@
++#include "types.h"
++#include "user.h"
++
++int main(){
++  int i;
++  int proc[20];
++  for(i = 0; i < 20; i++){ 
++    proc[i] = fork();
++    if(proc[i] == -1){
++      printf(1, "Fail to fork");
++      exit();
++    }
++    if(proc[i] > 0) continue;
++      int loop = 1000000;
++      int actual_loop = 0;
++      int j;
++      for(j = 0; j < loop ; j++){
++        // do some radom work
++        actual_loop ++;
++      }
++       exit();
++    
++  }
++ 
++  int wpid;
++  int wtime, rtime, iotime, status;
++  int total_w, total_r, total_io, total_t;
++
++  while((wpid = wait_stat(&wtime, &rtime, &iotime, &status)) != -1){
++    for(i = 0; i < 20; i++){
++      if(status == proc[i]){
++        printf(1, "Pid %d:\n", proc[i]);
++        printf(1, "Waiting time: %d\n", wtime);
++        printf(1, "Running time: %d\n", rtime);
++        printf(1, "Turnaround time: %d\n", wtime + rtime+ iotime);
++        break;
++      }
++    }
++
++    total_w += wtime;
++    total_r += rtime;
++    total_io += iotime;
++  }
++  total_t = (total_w + total_r + total_io);
++
++  printf(1, "\n\n");
++  printf(1, "Total waiting time: %d,\n", total_w);
++  printf(1, "Total running time: %d\n", total_r);
++  printf(1, "Total turnaround time: %d\n", total_t);
++  exit();
++}
+\ No newline at end of file
+diff --git a/syscall.c b/syscall.c
+index 799ebc2..158d49f 100644
+--- a/syscall.c
++++ b/syscall.c
+@@ -98,6 +98,7 @@ extern int sys_unlink(void);
+ extern int sys_wait(void);
+ extern int sys_write(void);
+ extern int sys_uptime(void);
++extern int sys_wait_stat(void);
+ 
+ static int (*syscalls[])(void) = {
+ [SYS_fork]    sys_fork,
+@@ -121,6 +122,8 @@ static int (*syscalls[])(void) = {
+ [SYS_link]    sys_link,
+ [SYS_mkdir]   sys_mkdir,
+ [SYS_close]   sys_close,
++[SYS_wait_stat] sys_wait_stat,
++
+ };
+ 
+ void
+diff --git a/syscall.h b/syscall.h
+index bc5f356..20adbc3 100644
+--- a/syscall.h
++++ b/syscall.h
+@@ -20,3 +20,4 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_wait_stat 22
+diff --git a/sysproc.c b/sysproc.c
+index 027a5e5..a2be1ea 100644
+--- a/sysproc.c
++++ b/sysproc.c
+@@ -89,3 +89,25 @@ sys_uptime(void)
+   release(&tickslock);
+   return xticks;
+ }
++
++int 
++sys_wait_stat(void){
++  
++  int* wtime, rtime, iotime, status;
++
++  if(argptr(0, (void*)&wtime, sizeof(&wtime)) < 0) {
++    return -1;
++  }
++  if(argptr(1, (void*)&rtime, sizeof(&rtime)) < 0){
++    return -1;
++  } 
++  if(argptr(2, (void*)&iotime, sizeof(&iotime)) < 0){
++    return -1;
++  } 
++  if(argptr(3, (void*)&status, sizeof(&status)) < 0){
++    return -1;
++  } 
++
++  return wait_stat((int*)wtime, (int*)rtime, (int*)iotime, (int*)status);
++
++}
+diff --git a/trap.c b/trap.c
+index 3f80145..6f82694 100644
+--- a/trap.c
++++ b/trap.c
+@@ -14,6 +14,9 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
+ struct spinlock tickslock;
+ uint ticks;
+ 
++extern void updateByTick(void);  // This implementation in proc.c. so every increment of tick, I will check the run,sleep or ready status
++
++
+ void
+ tvinit(void)
+ {
+@@ -50,6 +53,7 @@ trap(struct trapframe *tf)
+   case T_IRQ0 + IRQ_TIMER:
+     if(cpu->id == 0){
+       acquire(&tickslock);
++      updateByTick();
+       ticks++;
+       wakeup(&ticks);
+       release(&tickslock);
+@@ -99,11 +103,24 @@ trap(struct trapframe *tf)
+   // until it gets to the regular system call return.)
+   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+     exit();
++  #ifdef FCFS
++  // do not yield
++  #endif
++
+ 
+   // Force process to give up CPU on clock tick.
+   // If interrupts were on while locks held, would need to check nlock.
+-  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
++  // The procDuration needs to be in between the quanta
++  #ifdef FRR
++  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER  && proc->procDuration == QUANTA)   // this one added to check if process running time is equal to quanta, if so, runnig -> runnable
++    yield();
++
++  #endif
++
++   #ifdef DEFAULT
++  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER && proc->procDuration == QUANTA)   
+     yield();
++   #endif
+ 
+   // Check if the process has been killed since we yielded
+   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+diff --git a/user.h b/user.h
+index f45b8d5..160f0c2 100644
+--- a/user.h
++++ b/user.h
+@@ -22,7 +22,8 @@ int dup(int);
+ int getpid(void);
+ char* sbrk(int);
+ int sleep(int);
+-int uptime(void);
++int wait_stat(int* , int*, int* , int*);
++
+ 
+ // ulib.c
+ int stat(char*, struct stat*);
+diff --git a/usys.S b/usys.S
+index 8bfd8a1..3d084bc 100644
+--- a/usys.S
++++ b/usys.S
+@@ -29,3 +29,4 @@ SYSCALL(getpid)
+ SYSCALL(sbrk)
+ SYSCALL(sleep)
+ SYSCALL(uptime)
++SYSCALL(wait_stat)
+\ No newline at end of file
+-- 
+2.17.2 (Apple Git-113)
+

@@ -1,0 +1,215 @@
+<html>
+<meta charset="utf-8">
+<div class='my-legend'>
+<div class='legend-title'>10 main purposes of donation throughout time</div>
+<div class='legend-scale'>
+  <ul class='legend-labels'>
+    <li><span style='background:#FF0000;'></span>Power generation/renewable sources</li>
+    <li><span style='background:#008000;'></span> Rail transport</li>
+    <li><span style='background:#0000FF;'></span>Industrial development</li>
+    <li><span style='background:#FFA500;'></span>Power generation/non-renewable sources</li>
+    <li><span style='background:#FFC0CB;'></span> Social/ welfare services</li>
+    <li><span style='background:#800080;'></span>Sectors not specified</li>
+    <li><span style='background:#000000;'></span> Air transport</li>
+    <li><span style='background:#FFFF00;'></span>Telecommunications</li>
+    <li><span style='background:#808080;'></span>Import support (capital goods)</li>
+    <li><span style='background:#A52A2A;'></span>Rescehduling and Refinancing</li>
+
+  </ul>
+</div>
+</div>
+
+<style type='text/css'>
+  .my-legend .legend-title {
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 90%;
+    }
+  .my-legend .legend-scale ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 0;
+    float: left;
+    list-style: none;
+    }
+  .my-legend .legend-scale ul li {
+    font-size: 80%;
+    list-style: none;
+    margin-left: 0;
+    line-height: 18px;
+    margin-bottom: 2px;
+    }
+  .my-legend ul.legend-labels li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
+    border: 1px solid #999;
+    }
+  .my-legend .legend-source {
+    font-size: 70%;
+    color: #999;
+    clear: both;
+    }
+  .my-legend a {
+    color: #777;
+    }
+</style>
+
+
+<!-- Load d3.js -->
+<script src="d3.js"></script>
+
+<script>
+let store = {};
+
+function loadData() {
+    return Promise.all([
+        d3.csv("aiddata-countries-only.csv"),
+    ]).then(datasets => {
+        store.data = datasets[0];
+        return store;
+    })
+}
+
+
+function organizeData(){
+  let data = store.data;
+  let result = d3.nest()
+  .key(function(d){return d.coalesced_purpose_name})
+//  .key(function(d){return d.year})
+ // .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data);
+
+  result = result.sort((a,b) => {
+    return d3.descending(a.value, b.value);
+  })
+  s = result.slice(0,10)
+
+  
+  let r = d3.nest()
+  .key(function(d){return d.coalesced_purpose_name})
+  .key(function(d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data);
+
+  var color = ["#FF0000", "#008000", "#0000FF", "#FFA500", "#FFC0CB", "#800080" , "#000000", "#FFFF00", "#808080", "#A52A2A"]
+
+  result = {};
+  for(var i = 0; i<r.length ; i++){
+    for (var j = 0 ; j<s.length; j++){
+    if(r[i].key == s[j].key ){
+      console.log(r[i].key);
+       result[r[i].key]=  {values:r[i].values, color:color[j]};
+  
+       
+
+    }
+   
+  }
+  }
+
+  var top =  10;
+  var right = 100;
+  var bottom = 20;
+  var left = 100;
+  var w = 1000;
+  var h = 500;
+
+
+    var m = {top, bottom, left, right};
+  
+    var config = {
+      width: w - left - right,
+      height: h - top - bottom,
+      margin: m
+
+    };
+
+
+
+   draw(result,config);
+
+
+}
+
+function draw(result, config){
+
+
+var width = config.width;
+var height = config.height;
+
+var margin = config.margin;
+
+//console.log(value);
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+var y = d3.scaleLinear()
+    .range([height, 0]);
+
+var xAxis = d3.axisBottom(x)
+
+var yAxis = d3.axisLeft(y)
+
+var line = d3.line()
+   .x(function(d) { return x(d.key)})
+   .y(function(d) { return y(d.value)})
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+  x.domain(["1970", "2015"]);
+
+  y.domain([100000,8000000000]);
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis); // Create an axis component with d3.axisBottom
+
+// 4. Call the y axis in a group tag
+svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis); // Create an axis component with d3.axisLeft
+
+// 9. Append the path, bind the data, and call the line generator 
+for (var key in result){
+svg.append("path")
+    .datum(result[key].values) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling 
+    .attr("d", line) // 11. Calls the line generator 
+    .attr("fill", "none")
+.attr("stroke",result[key].color )
+.attr("stroke-linejoin", "round")
+.attr("stroke-linecap", "round")
+.attr("stroke-width", 2);
+
+
+
+
+ }
+
+ }
+
+
+
+
+
+loadData().then(organizeData);
+
+
+
+</script>
+
+</html>

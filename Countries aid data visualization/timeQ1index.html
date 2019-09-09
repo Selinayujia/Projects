@@ -1,0 +1,470 @@
+<html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="d3.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="d3.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<h1> Countries's donation and receive amount from 1975 - 2015</h1>
+<div class='my-legend'>
+<div class='legend-title'>Donation and Receive</div>
+<div class='legend-scale'>
+  <ul class='legend-labels'>
+    <li><span style='background:#FF0000;'></span>Receive</li>
+    <li><span style='background:#0000FF;'></span>Donation</li>
+
+  </ul>
+</div>
+</div>
+
+<style type='text/css'>
+  .my-legend .legend-title {
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 90%;
+    }
+  .my-legend .legend-scale ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 0;
+    float: left;
+    list-style: none;
+    }
+  .my-legend .legend-scale ul li {
+    font-size: 80%;
+    list-style: none;
+    margin-left: 0;
+    line-height: 18px;
+    margin-bottom: 2px;
+    }
+  .my-legend ul.legend-labels li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
+    border: 1px solid #999;
+    }
+  .my-legend .legend-source {
+    font-size: 70%;
+    color: #999;
+    clear: both;
+    }
+  .my-legend a {
+    color: #777;
+    }
+</style>
+
+<br> 
+<br>
+<br>
+<br>
+<div id="my_dataviz"></div>
+
+
+
+
+<script>
+let store = {};
+
+function loadData() {
+    return Promise.all([
+        d3.csv("aiddata-countries-only.csv"),
+    ]).then(datasets => {
+        store.data = datasets[0];
+        return store;
+    })
+}
+
+
+function organizeData(){
+  let data = store.data;
+  let donate_result = d3.nest()
+  .key(function(d){return d.donor})
+  .key(function(d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data)
+
+
+ let receive_result = d3.nest()
+  .key(function(d){return d.recipient})
+  .key(function (d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data)
+
+
+  var top =  10;
+  var right = 100;
+  var bottom = 20;
+  var left = 100;
+  var w = 500;
+  var h = 200;
+
+  var containers = {};
+
+  for(var i = 0; i < donate_result.length; i++){
+    var m = {top, bottom, left, right};
+  
+    var config = {
+      width: w - left - right,
+      height: h - top - bottom,
+      margin: m
+
+    };
+
+
+  }
+
+   for(var i = 0; i < receive_result.length; i++){
+
+    if (containers[receive_result[i].key] == null){
+      var m = {top, bottom, left, right};
+
+      var config = {
+      width: w - left - right,
+      height: h - top - bottom,
+      margin: m
+
+      };
+
+
+      containers[receive_result[i].key] = config;
+
+    }
+
+   }
+
+   var d_country_list = {};
+   var r_country_list = {};
+
+  for(var i = 0; i< donate_result.length; i++){
+    d_country_list[donate_result[i].key] = donate_result[i].values;
+
+  }
+
+  for(var i = 0; i< receive_result.length; i++){
+    r_country_list[receive_result[i].key] = receive_result[i].values;
+  }
+
+ 
+
+
+
+
+
+   draw(d_country_list,r_country_list, containers);
+
+
+
+
+
+
+
+}
+
+function draw(d,r, containers){
+
+
+
+for (var key in containers){
+  var donate = d[key];
+  var receive = r[key];
+  if (donate != null && receive != null){
+var width = containers[key].width;
+var height = containers[key].height;
+
+var margin = containers[key].margin;
+
+//console.log(value);
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+var y = d3.scaleLinear()
+    .range([height, 0]);
+
+var xAxis = d3.axisBottom(x)
+
+var yAxis = d3.axisLeft(y)
+
+var line = d3.line()
+   .x(function(d) { return x(d.key)})
+   .y(function(d) { return y(d.value)})
+
+var svg = d3.select("#my_dataviz").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+  x.domain(["1970", "2015"]);
+
+  y.domain([10000,10000000000]);
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis); // Create an axis component with d3.axisBottom
+
+// 4. Call the y axis in a group tag
+svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis); // Create an axis component with d3.axisLeft
+
+// 9. Append the path, bind the data, and call the line generator 
+svg.append("path")
+    .datum(donate) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling 
+    .attr("d", line) // 11. Calls the line generator 
+    .attr("fill", "none")
+.attr("stroke", "steelblue")
+.attr("stroke-linejoin", "round")
+.attr("stroke-linecap", "round")
+.attr("stroke-width", 1.5);
+
+
+
+
+svg.append("path")
+    .datum(receive) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling 
+    .attr("d", line) // 11. Calls the line generator 
+    .attr("fill", "none")
+.attr("stroke", "red")
+.attr("stroke-linejoin", "round")
+.attr("stroke-linecap", "round")
+.attr("stroke-width", 1.5)
+.text(key)
+
+svg.append("text")
+   .attr("y", height)//magic number here
+   .attr("x", function(){ return x("2015") + 30})
+   .attr('text-anchor', 'middle')
+   .attr("class", "myLabel")//easy to style with CSS
+   .text(key);
+
+ }
+}
+
+
+}
+
+loadData().then(organizeData);
+
+
+
+</script>
+
+</html>
+<div id="my_dataviz"></div>
+
+
+
+
+<script>
+let store = {};
+
+function loadData() {
+    return Promise.all([
+        d3.csv("aiddata-countries-only.csv"),
+    ]).then(datasets => {
+        store.data = datasets[0];
+        return store;
+    })
+}
+
+
+function organizeData(){
+  let data = store.data;
+  let donate_result = d3.nest()
+  .key(function(d){return d.donor})
+  .key(function(d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data)
+
+
+ let receive_result = d3.nest()
+  .key(function(d){return d.recipient})
+  .key(function (d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data)
+
+
+  var top =  10;
+  var right = 100;
+  var bottom = 20;
+  var left = 100;
+  var w = 500;
+  var h = 200;
+
+  var containers = {};
+
+  for(var i = 0; i < donate_result.length; i++){
+    var m = {top, bottom, left, right};
+  
+    var config = {
+      width: w - left - right,
+      height: h - top - bottom,
+      margin: m
+
+    };
+
+
+  }
+
+   for(var i = 0; i < receive_result.length; i++){
+
+    if (containers[receive_result[i].key] == null){
+      var m = {top, bottom, left, right};
+
+      var config = {
+      width: w - left - right,
+      height: h - top - bottom,
+      margin: m
+
+      };
+
+
+      containers[receive_result[i].key] = config;
+
+    }
+
+   }
+
+   var d_country_list = {};
+   var r_country_list = {};
+
+  for(var i = 0; i< donate_result.length; i++){
+    d_country_list[donate_result[i].key] = donate_result[i].values;
+
+  }
+
+  for(var i = 0; i< receive_result.length; i++){
+    r_country_list[receive_result[i].key] = receive_result[i].values;
+  }
+
+ 
+
+
+
+
+
+   draw(d_country_list,r_country_list, containers);
+
+
+
+
+
+
+
+}
+
+function draw(d,r, containers){
+
+
+
+for (var key in containers){
+  var donate = d[key];
+  var receive = r[key];
+  if (donate != null && receive != null){
+var width = containers[key].width;
+var height = containers[key].height;
+
+var margin = containers[key].margin;
+
+//console.log(value);
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+var y = d3.scaleLinear()
+    .range([height, 0]);
+
+var xAxis = d3.axisBottom(x)
+
+var yAxis = d3.axisLeft(y)
+
+var line = d3.line()
+   .x(function(d) { return x(d.key)})
+   .y(function(d) { return y(d.value)})
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+  x.domain(["1970", "2015"]);
+
+  y.domain([10000,10000000000]);
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis); // Create an axis component with d3.axisBottom
+
+// 4. Call the y axis in a group tag
+svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis); // Create an axis component with d3.axisLeft
+
+// 9. Append the path, bind the data, and call the line generator 
+svg.append("path")
+    .datum(donate) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling 
+    .attr("d", line) // 11. Calls the line generator 
+    .attr("fill", "none")
+.attr("stroke", "steelblue")
+.attr("stroke-linejoin", "round")
+.attr("stroke-linecap", "round")
+.attr("stroke-width", 1.5);
+
+
+
+
+svg.append("path")
+    .datum(receive) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling 
+    .attr("d", line) // 11. Calls the line generator 
+    .attr("fill", "none")
+.attr("stroke", "red")
+.attr("stroke-linejoin", "round")
+.attr("stroke-linecap", "round")
+.attr("stroke-width", 1.5)
+.text(key)
+
+svg.append("text")
+   .attr("y", height)//magic number here
+   .attr("x", function(){ return x("2015") + 30})
+   .attr('text-anchor', 'middle')
+   .attr("class", "myLabel")//easy to style with CSS
+   .text(key);
+
+ }
+}
+
+
+}
+
+loadData().then(organizeData);
+
+
+
+</script>
+
+</html>

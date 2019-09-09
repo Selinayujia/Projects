@@ -1,0 +1,231 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <h1> United State Donation to other countries</h1>
+</head>
+
+<div class='my-legend'>
+<div class='legend-title'>Donating Amount</div>
+<div class='legend-scale'>
+  <ul class='legend-labels'>
+    <li><span style='background:#FFFFFF;'></span>0 - 10000</li>
+    <li><span style='background:#ddddf4;'></span> 10000 - 1000000</li>
+    <li><span style='background:#a5a3df;'></span>1000000 - 10000000</li>
+    <li><span style='background:#6d6ad6;'></span>10000000 - 100000000</li>
+    <li><span style='background:#0000FF;'></span> Above 1000000000</li>
+
+  </ul>
+</div>
+</div>
+
+<style type='text/css'>
+  .my-legend .legend-title {
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 90%;
+    }
+  .my-legend .legend-scale ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 0;
+    float: left;
+    list-style: none;
+    }
+  .my-legend .legend-scale ul li {
+    font-size: 80%;
+    list-style: none;
+    margin-left: 0;
+    line-height: 18px;
+    margin-bottom: 2px;
+    }
+  .my-legend ul.legend-labels li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
+    border: 1px solid #999;
+    }
+  .my-legend .legend-source {
+    font-size: 70%;
+    color: #999;
+    clear: both;
+    }
+  .my-legend a {
+    color: #777;
+    }
+</style>
+
+<script src="d3.js"></script>
+<script>
+ let store = {};
+
+function loadData() {
+    return Promise.all([
+        d3.csv("aiddata-countries-only.csv"),
+    ]).then(datasets => {
+        store.data = datasets[0];
+        return store;
+    })
+}
+
+
+function organizeData(){
+  let data = store.data;
+  let donate_result = d3.nest()
+  .key(function(d){return d.donor = "United States"})
+  .key (function(d){if(d.donor == "United States") return d.recipient})
+  .key(function(d){return d.year})
+  .sortKeys(d3.ascending)
+  .rollup(function(v) { return d3.sum(v, function(d) { return d.commitment_amount_usd_constant })})
+  .entries(data)
+
+  console.log(donate_result);
+  result = donate_result[0].values;
+
+
+  var usResult = [];
+
+
+  for (var i = 0 ; i < result.length; i++){
+    var country = result[i].key;
+    var amounts = result[i].values;
+    var countryResult = [];
+    var startYear = 1970;
+    var endYear = 1975;
+    var currAmount = 0;
+    var j = 0;
+    while(j < amounts.length){
+
+      if (startYear <= parseInt(amounts[j].key) &&  parseInt(amounts[j].key) < endYear){
+           currAmount += amounts[j].value
+           j += 1;
+      }
+
+      else{
+        var yearAmount = {
+          key: startYear,
+          value: currAmount
+        }
+        startYear = endYear;
+        endYear += 5;
+        currAmount = 0;
+        countryResult.push(yearAmount);
+      }
+ 
+    }
+    while (endYear !=  2020){
+      var yearAmount = {
+          key: startYear,
+          value: currAmount
+        }
+        countryResult.push(yearAmount);
+        currAmount = 0;
+        startYear = endYear
+        endYear += 5;
+
+    }
+    usResult.push({
+      key: country,
+      values: countryResult
+
+    })
+
+    
+  }
+
+  draw(usResult)
+}
+
+
+loadData().then(organizeData);
+
+
+
+function draw(usResult){
+
+
+var margin = {top: 100, right: 100, bottom: 100, left: 200},
+    width = 800,
+    height = 1000;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right )
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var rowLabels = [];
+for (var i = 1970; i <= 2015; i += 5) {
+  rowLabels.push(i);
+}
+
+var columnLabels = [];
+for (var i = 0; i < usResult.length; i++) {
+  columnLabels.push(usResult[i].key);
+}
+
+let x = d3.scaleBand()
+        .range([0, width])
+        .domain(rowLabels) //The domain is the list of ailines names
+        .padding(0.2)
+
+let y = d3.scaleBand()   // 42
+        .range([0, height])
+        .domain(columnLabels) //The domain is the list of ailines names
+        .padding(0.2)
+
+
+
+var colorMap = d3.scaleLinear()
+    .domain([0, 10000000000])
+    .range(["white", "#0000FF"]);   
+
+var row = svg.selectAll(".row")
+    .data(usResult)
+    .enter().append("g")
+    .attr("class", "row")
+    .attr("transform", function(d, i) {return "translate(0," + (i * y.bandwidth() ) + ")"; });
+
+row.selectAll(".cell")
+    .data(function(d) {return d.values;})
+    .enter().append("rect")
+    .attr("class", "cell")
+    .attr("x", function(d, i) {return i * x.bandwidth(); })
+    .attr("width", x.bandwidth())
+    .attr("height", y.bandwidth());
+//   .style("fill", "white");
+
+
+
+row.append("text")
+    .attr("y", y.bandwidth() / 2)
+    .attr("dy", ".32em")
+    .attr("text-anchor", "end")
+    .text(function(d) {return d.key; });
+
+var column = svg.selectAll(".column")
+    .data(rowLabels)
+    .enter().append("g")
+    .attr("class", "column")
+    .attr("transform", function(d, i) { return "translate(" + (i * x.bandwidth() )+ ")rotate(-90)"; });
+
+column.append("text")
+    .attr("x", x.bandwidth()/4)
+    .attr("y", margin.top - 100)
+    .attr("dy", ".32em")
+    .attr("text-anchor", "start")
+    .text(function(d) { return d; });
+
+row.selectAll(".cell")
+    .data(function(d) { return d.values})
+    .style("fill", function(d){return colorMap(d.value); });
+
+
+}
+  
+</script>
+</body>
+</html

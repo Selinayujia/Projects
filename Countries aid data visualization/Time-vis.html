@@ -1,0 +1,617 @@
+<html>
+<head>
+  <script src="d3.js"></script> 
+  <style>
+  body {
+    font-family: Helvetica, Arial, sans-serif
+  }
+
+  h1 {
+    background-color: #2a5599;
+    color: #FFFFFF;
+    padding: 5px;
+  }
+
+  #Q1, #Q2{
+   border: 1px solid black;
+
+ }
+
+ .mainView {
+  display: flex;
+
+ }
+
+</style>
+</head>
+
+<body>
+  <h1>Miniproject</h1>
+ 
+    <div>
+      <h2>Q1</h2>
+      <svg id="Q1"></svg>
+    </div>
+    <div>
+      <h2>Q2</h2>
+      <svg id="Q2"></svg>
+    </div>
+     <div class="mainView">
+    <div>
+      <h2>Q3 Air transport</h2>
+      <svg id="Q31"></svg>
+    </div>
+    <div>
+      <h2>Q3 Industrial development</h2>
+      <svg id="Q32"></svg>
+    </div>
+    <div>
+      <h2>Q3 Power generation</h2>
+      <svg id="Q33"></svg>
+    </div>
+    <div>
+      <h2>Q3 Rail transport</h2>
+      <svg id="Q34"></svg>
+    </div>
+    <div>
+      <h2>Q3 Rescheduling and Refinancing </h2>
+      <svg id="Q35"></svg>
+    </div>
+  </div>
+</body>
+
+<script> 
+  
+ function groupByCountryDonate(data) {
+  let result = d3.nest()
+  .key(function(d){return d.donor;})
+  .rollup(function(v) { return {
+    Amount: d3.sum(v, function(d) { 
+      return d.commitment_amount_usd_constant; } ),
+  };})
+  .entries(data);
+
+  result = result.sort((a,b) => {
+    return d3.descending(a.value.Amount, b.value.Amount);
+  })
+  return result;
+}
+
+function groupByCountryReceive(data) {
+
+  let result = d3.nest()
+  .key(function(d){return d.recipient;})
+  .rollup(function(v) { return {
+    Amount: d3.sum(v, function(d) { return d.commitment_amount_usd_constant; } ),
+  };})
+  .entries(data);
+
+  result = result.sort((a,b) => {
+    return d3.descending(a.value.Amount, b.value.Amount);
+  })
+  return result;
+}
+
+
+function drawChart(donor, recipient) {
+  let configR = getRecipientChartConfig("Q1");
+  let scalesR = getRecipientChartScales(recipient, configR);
+  let configD = getDonorChartConfig("Q1");
+  let scalesD = getDonorChartScales(donor, configD);
+
+  drawBarsRecipientChart(recipient, scalesR, configR);
+  drawBarsDonorChart(donor, scalesD, configD);
+  drawAxesRecipientChart(scalesR, configR);
+  drawAxesDonorChart(scalesD, configD);
+  drawLineBetween(donor,recipient,scalesD,configD,scalesR,configR);
+
+
+}
+
+function drawLineBetween(donor, recipient, scalesD, configD, scalesR, configR){
+  let {container,bodyWidth} = configR; 
+  let marginR = configR.margin;
+  let marginD = configD.margin;
+  let xScaleR = scalesR.xScale;
+  let yScaleR = scalesR.yScale;
+  let xScaleD = scalesD.xScale;
+  let yScaleD = scalesD.yScale;
+  var nodesData = {}; 
+
+
+  var sourceR = [];
+  var initialPosR = {
+    x: marginR.left + bodyWidth,
+    y: marginR.top + (yScaleR.bandwidth())/2 
+  };
+  for(var i = 0; i < recipient.length; i++){
+    sourceR.push({
+      name: recipient[i].key,
+      xR: initialPosR.x,
+      yR: initialPosR.y
+    });
+    nodesData[recipient[i].key] = i;
+    initialPosR.y += yScaleR.bandwidth();
+  }
+
+
+  var sourceD = [];
+  console.log(marginD.left);
+  var initialPosD = {
+    x: marginD.left,
+    y: marginD.top + (yScaleD.bandwidth())/2 
+  };
+  for (var i = 0; i < donor.length; i++) { 
+    if (nodesData[donor[i].key] != null){
+      sourceD[nodesData[donor[i].key]] = {
+      name: donor[i].key,
+      xD: initialPosD.x,
+      yD: initialPosD.y
+      };
+    }
+  
+    initialPosD.y += yScaleD.bandwidth();
+    
+    
+  }
+
+  for (var i = 0; i < sourceR.length; i++) { 
+    if (sourceD[i] != null){
+      container.append('line')
+       .data(recipient)
+       .attr('x1', sourceR[i].xR)
+       .attr('y1', sourceR[i].yR)
+       .attr('x2', sourceD[i].xD)
+       .attr('y2', sourceD[i].yD)
+       .attr("stroke-width", 1)
+       .attr("stroke", "black");
+    }
+
+  }
+    
+    
+}
+
+ 
+
+
+
+
+
+function getDonorChartConfig(id, width = 1300, height = 800){
+    let margin = {
+      top: 10,
+      bottom: 50,
+      left: 800,
+      right: 10
+    }
+    //The body is the are that will be occupied by the bars.
+    let bodyHeight = height - margin.top - margin.bottom
+    let bodyWidth =  width - margin.left - margin.right
+
+    //The container is the SVG where we will draw the chart. In our HTML is the svg tah with the id AirlinesChart
+    let container = d3.select("#"+id)
+    container.attr("width", width)
+    .attr("height", height)
+
+    return { width, height, margin, bodyHeight, bodyWidth, container }
+  }
+
+  function getRecipientChartConfig(id, width = 1300, height = 800, left = 10, right = 800){
+    let margin = {
+      top: 10,
+      bottom: 50,
+      left: left,
+      right: right,
+    }
+    //The body is the are that will be occupied by the bars.
+    let bodyHeight = height - margin.top - margin.bottom
+    let bodyWidth =  width - margin.left - margin.right
+
+    //The container is the SVG where we will draw the chart. In our HTML is the svg tah with the id AirlinesChart
+    let container = d3.select("#"+id)
+    container.attr("width", width)
+    .attr("height", height)
+
+    return { width, height, margin, bodyHeight, bodyWidth, container }
+  }
+
+
+  function getDonorChartScales(donor, config) {
+    let { bodyWidth, bodyHeight } = config;
+    let maximumCount = d3.max(donor, function(d){
+      return d.value.Amount
+    })
+
+    let xScale = d3.scaleLinear()
+    .range([0, bodyWidth])
+    .domain([0, maximumCount])
+
+    let yScale = d3.scaleBand()
+    .range([0, bodyHeight])
+        .domain(donor.map(a => a.key)) //The domain is the list of ailines names
+        .padding(0.1)
+
+        return { xScale, yScale }
+      }
+
+
+      function getRecipientChartScales(recipient, config) {
+        let { bodyWidth, bodyHeight } = config;
+        let maximumCount = d3.max(recipient, function(d){
+          return d.value.Amount
+        })
+
+        let xScale = d3.scaleLinear()
+        .range([0, bodyWidth])
+        .domain([maximumCount,0])
+
+        let yScale = d3.scaleBand()
+        .range([0, bodyHeight])
+    .domain(recipient.map(a => a.key)) //The domain is the list of ailines names
+    .padding(0.1)
+
+    return { xScale, yScale }
+  }
+
+
+
+  function drawBarsDonorChart(donor, scales, config) {
+  let {margin, container} = config; // this is equivalent to 'let margin = config.margin; let container = config.container'
+  let {xScale, yScale} = scales
+  let body = container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${margin.top}px)`
+    )
+
+  let bars = body.selectAll(".bar")
+  .data(donor)
+  //Adding a rect tag for each airline
+  bars.enter().append("rect")
+  .attr("height", yScale.bandwidth())
+  .attr("y", (d) => yScale(d.key))
+  .attr("width", (d) => xScale(d.value.Amount))
+  .attr("fill", "#2a5599")
+
+  let nodeBody = container.append("g")
+  .style("transform", 
+    `translate(${margin.left }px,${margin.top + (yScale.bandwidth()/2)}px)`);
+  let nodes = nodeBody.selectAll(".node")
+  .data(donor);
+  nodes.enter().append("circle")
+  .attr( "r", 2)
+  .attr("cy",(d) => yScale(d.key) )
+  .attr("fill", "#000000")
+
+}
+
+
+function drawBarsRecipientChart(recipient, scales, config) {
+  let {margin, container, bodyWidth} = config; // this is equivalent to 'let margin = config.margin; let container = config.container'
+  let {xScale, yScale} = scales  
+  let body = container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${margin.top}px)`
+    )
+  let bars = body.selectAll(".bar")
+  .data(recipient)
+  //Adding a rect tag for each airline
+  bars.enter().append("rect")
+  .attr("height", yScale.bandwidth())
+  .attr("y", (d) => yScale(d.key))
+  .attr("width", (d) => (xScale(0)- xScale(d.value.Amount)))
+  .attr("x", (d)=> xScale(d.value.Amount))
+  .attr("fill", "#D50C06")
+
+  let nodeBody = container.append("g")
+  .style("transform", 
+    `translate(${margin.left + bodyWidth }px,${margin.top + (yScale.bandwidth()/2)}px)`)
+  let nodes = nodeBody.selectAll(".node")
+  .data(recipient)
+  nodes.enter().append("circle")
+  .attr( "r", 2)
+  .attr("cy",(d) => yScale(d.key) )
+  .attr("fill", "#000000")
+
+  
+
+}
+
+function drawAxesDonorChart(scales, config){
+  let {xScale, yScale} = scales
+  let {container, margin, height} = config;
+  let axisX = d3.axisBottom(xScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${height - margin.bottom}px)`
+    )
+  .call(axisX)
+
+  let axisY = d3.axisLeft(yScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${ margin.top}px)`
+    )
+  .call(axisY)
+
+}
+
+
+function drawAxesRecipientChart(scales, config){
+  let {xScale, yScale} = scales
+  let {container, margin, height, bodyWidth} = config;
+  let axisX = d3.axisBottom(xScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${height - margin.bottom}px)`
+    )
+  .call(axisX) 
+
+  let axisY = d3.axisRight(yScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left +bodyWidth }px,${ margin.top}px)`
+    )
+  .call(axisY)
+
+
+}
+
+
+
+
+
+
+function getMapConfig(){
+  let width = 600;
+  let height = 400;
+  let container = d3.select("#Q2")
+  container.attr("width", width)
+  .attr("height", height)
+  return {width, height, container}
+}
+
+
+function getMapProjection(config) {
+  let {width, height} = config;
+  let projection = d3.geoMercator();
+  projection.scale(97)
+  .translate([width / 2, height / 2 + 20])
+
+  store.mapProjection = projection;
+  return projection;
+}
+
+function drawBaseMap(container, countries, projection){
+  let path = d3.geoPath().projection(projection)
+  
+  container.selectAll("path").data(countries)
+  .enter().append("path")
+  .attr("d",path)
+  .attr("stroke", "#ccc")
+  .attr("fill", "#eee")
+}
+
+function drawMap(geoJeon) {
+  let config = getMapConfig();
+  let projection = getMapProjection(config)
+  drawBaseMap(config.container, geoJeon.features, projection)
+}
+
+function groupByAirport(data) {
+    //We use reduce to transform a list into a object where each key points to an aiport. This way makes it easy to check if is the first time we are seeing the airport.
+    let result = data.reduce((result, d) => {
+        //The || sign in the line below means that in case the first option is anything that Javascript consider false (this insclude undefined, null and 0), the second option will be used. Here if result[d.DestAirportID] is false, it means that this is the first time we are seeing the airport, so we will create a new one (second part after ||)
+        
+        let currentDest = result[d.DestAirportID] || {
+          "AriportID": d.DestAirportID,
+          "Airport": d.DestAirport,
+          "Latitude": +d.DestLatitude,
+          "Longitude": +d.DestLongitude,
+          "City": d.DestCity,
+          "Country": d.DestCountry,
+          "Count": 0
+        }
+        currentDest.Count += 1
+        result[d.DestAirportID] = currentDest
+
+        //After doing for the destination airport, we also update the airport the airplane is departing from.
+        let currentSource = result[d.SourceAirportID] || {
+          "AriportID": d.SourceAirportID,
+          "Airport": d.SourceAirport,
+          "Latitude": +d.SourceLatitude,
+          "Longitude": +d.SourceLongitude,
+          "City": d.SourceCity,
+          "Country": d.SourceCountry,
+          "Count": 0
+        }
+        currentSource.Count += 1
+        result[d.SourceAirportID] = currentSource
+
+        return result
+      }, {})
+    
+    //We map the keys to the actual ariorts, this is an way to transform the object we got in the previous step into a list.
+    result = Object.keys(result).map(key => result[key])
+    return result
+  }
+
+  function drawDonors(donor) {
+  let config = getMapConfig(); //get the config
+  let projection = getMapProjection(config) //get the projection
+  let container = config.container; //get the container
+
+  let circles = container.selectAll("circle")
+  .data(donor)
+  .enter()
+  .append("circle")
+  .attr("r", 1)
+  .attr("cx", d => projection([+d.Longitude, +d.Latitude])[0])
+  .attr("cy", d => projection([+d.Longitude, +d.Latitude])[1])
+  .attr("fill", "#2a5599");
+
+
+
+}
+let store = {};
+loadData().then(showData);
+
+
+
+
+
+
+
+
+  
+
+
+function groupByCountryReceiveCat(data,cat) {
+  let result = d3.nest()
+  .key(function(d){return d.recipient;})
+  .rollup(function(v) { return {
+    Amount: d3.sum(v, function(d) { if(d.coalesced_purpose_name == cat){ return d.commitment_amount_usd_constant;} } ),
+  };})
+  .entries(data);
+
+  return result;
+}
+function showData() {
+    let recipient = groupByCountryReceive(store.aiddata);
+    let donor = groupByCountryDonate(store.aiddata);
+    drawChart(donor, recipient);
+    drawMap(store.geoJSON) //Using the data saved on loadData
+    //drawDonors(donor)
+ }
+
+ function loadData() {
+    return Promise.all([
+      d3.csv("aiddata-countries-only.csv"),
+      d3.json("countries.geo.json"),
+      ]).then(datasets => {
+        store.aiddata = datasets[0];
+        store.geoJSON = datasets[1]
+        return store;
+      })
+    }
+
+    function showData() {
+    let recipient = groupByCountryReceive(store.aiddata);
+    let donor = groupByCountryDonate(store.aiddata);
+    drawChart(donor, recipient);
+    drawMap(store.geoJSON) 
+    var mission = [];
+    mission.push(groupByCountryReceiveCat(store.aiddata, "Air transport"));
+    mission.push(groupByCountryReceiveCat(store.aiddata, "Industrial development"));
+    mission.push(groupByCountryReceiveCat(store.aiddata, "Power generation/non-renewable sources"));
+    mission.push(groupByCountryReceiveCat(store.aiddata, "Rail transport"));
+    mission.push(groupByCountryReceiveCat(store.aiddata, "RESCHEDULING AND REFINANCING"));
+
+    var scales;
+    for (var i = mission.length-1; i >= 0 ; i--){
+      if (i == mission.length-1){
+        let config = getRecipientChartConfig("Q35", 700, 800,50, 10);
+        scales = getChartScales(mission[i],config);
+      }
+       drawCharts(mission[i], "Q3"+String(i+1), scales);
+
+    }
+   
+
+ }
+
+
+function drawCharts(target, id, scales) {
+  
+  let config = getRecipientChartConfig(id, 700, 800, 50, 10);
+  drawBarsChart(scales, config, target);
+  drawAxesChart(scales, config);
+}
+
+
+
+function drawBarsChart(scales, config, target) {
+  let {margin, container} = config; // this is equivalent to 'let margin = config.margin; let container = config.container'
+  let {xScale, yScale} = scales
+  let body = container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${margin.top}px)`
+    )
+
+  let bars = body.selectAll(".bar")
+  .data(target)
+  //Adding a rect tag for each airline
+  bars.enter().append("rect")
+  .attr("height", yScale.bandwidth())
+  .attr("y", (d) => yScale(d.key))
+  .attr("width", (d) => xScale(d.value.Amount))
+  .attr("fill", "#2a5599")
+  
+}
+
+function getChartScales(recipient, config) {
+        let { bodyWidth, bodyHeight } = config;
+        let maximumCount = d3.max(recipient, function(d){
+          return d.value.Amount
+        })
+
+        let xScale = d3.scaleLinear()
+        .range([0, bodyWidth])
+        .domain([0,maximumCount])
+
+        let yScale = d3.scaleBand()
+        .range([0, bodyHeight])
+    .domain(recipient.map(a => a.key)) //The domain is the list of ailines names
+    .padding(0.1)
+
+    return { xScale, yScale }
+  }
+
+
+
+
+function drawAxesChart(scales, config){
+  let {xScale, yScale} = scales
+  let {container, margin, height} = config;
+  let axisX = d3.axisBottom(xScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${height - margin.bottom}px)`
+    )
+  .call(axisX)
+
+  let axisY = d3.axisLeft(yScale)
+  .ticks(5)
+
+  container.append("g")
+  .style("transform", 
+    `translate(${margin.left}px,${ margin.top}px)`
+    )
+  .call(axisY)
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+</html>

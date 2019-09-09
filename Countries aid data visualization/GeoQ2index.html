@@ -1,0 +1,185 @@
+<html>
+  
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <h1>Map of Donated and Received Amounts</h1>
+    <div class="container">
+      <svg id="my_data_viz"></svg>
+    </div>
+
+    <div class='my-legend'>
+<div class='legend-title'>Amount</div>
+<div class='legend-scale'>
+  <ul class='legend-labels'>
+    <li><span style='background:#b2182b;'></span>Receive above 1000,000,000,000</li>
+    <li><span style='background:#d6604d;'></span>Receive 1000,000,0000 - 1000,000,000,000</li>
+    <li><span style='background:#f4a582;'></span>Receive 1000,000,000 - 1000,000,0000</li>
+    <li><span style='background:#fddbc7;'></span> Receive 100000000 - 1000,000,000</li>
+    <li><span style='background:#fafafa;'></span>0 </li>
+    <li><span style='background:#92c5de;'></span>Donate 100000000 - 1000,000,000</li>
+    <li><span style='background:#6d6ad6;'></span>Donate 1000,000,000 - 1000,000,0000</li>
+    <li><span style='background:#4393c3;'></span> Donate 1000,000,0000 - 1000,000,000,000</li>
+    <li><span style='background:#2166ac;'></span> Donate above 1000,000,000,000</li>
+
+  </ul>
+</div>
+</div>
+
+<style type='text/css'>
+  .my-legend .legend-title {
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 90%;
+    }
+  .my-legend .legend-scale ul {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 0;
+    float: left;
+    list-style: none;
+    }
+  .my-legend .legend-scale ul li {
+    font-size: 80%;
+    list-style: none;
+    margin-left: 0;
+    line-height: 18px;
+    margin-bottom: 2px;
+    }
+  .my-legend ul.legend-labels li span {
+    display: block;
+    float: left;
+    height: 16px;
+    width: 30px;
+    margin-right: 5px;
+    margin-left: 0;
+    border: 1px solid #999;
+    }
+  .my-legend .legend-source {
+    font-size: 70%;
+    color: #999;
+    clear: both;
+    }
+  .my-legend a {
+    color: #777;
+    }
+</style>
+
+    <script>
+      let store = {}
+
+      function loadData() {
+        return Promise.all([
+          d3.csv('aiddata-countries-only.csv'),
+          d3.json('countries.geo.json'),
+        ]).then(datasets => {
+          store.aidData = datasets[0]
+          store.geoJSON = datasets[1]
+          return store
+        })
+      }
+
+      function showData() {
+        let countries = organizeData(store.aidData, store.geoJSON)
+        draw(countries, store.geoJSON)
+       
+      }
+
+
+      function organizeData(aidData, geoJSON) {
+        let result = aidData.reduce((result, d) => {
+          let currentDonor = result[d.donor] || {
+            'country': d.donor,
+            'donated_amount': 0,
+            'received_amount': 0,
+            'geo': geoJSON.features.find(f => f.properties.name == d.donor)
+          }
+          let currentRecipient = result[d.recipient] || {
+            'country': d.recipient,
+            'donated_amount': 0,
+            'received_amount': 0,
+            'geo': geoJSON.features.find(f => f.properties.name == d.recipient)
+          }
+
+          currentDonor.donated_amount += +d.commitment_amount_usd_constant
+          currentRecipient.received_amount += +d.commitment_amount_usd_constant
+
+          result[d.donor] = currentDonor
+          result[d.recipient] = currentRecipient
+
+          return result
+        }, {})
+
+        return result
+      }
+
+
+      function draw(countries, geoJSON) {
+        let width = 1400
+        let height = 1000
+        let margin = {
+          top: 10,
+          bottom: 10,
+          left: 10,
+          right: 10
+        }
+
+        let bodyHeight = height - margin.top - margin.bottom;
+        let bodyWidth = width - margin.left - margin.right;
+   
+
+        let container = d3.select('#my_data_viz')
+        container.attr('width', width)
+                 .attr('height', height)
+
+        let config = {width, height, margin, bodyHeight, bodyWidth,container};
+
+        let divergingDomain = [1000000000000, 10000000000, 1000000000, 100000000, 0, 100000000, 1000000000, 10000000000, 1000000000000]
+        let divergingRange = ['#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#d1e5f0','#92c5de','#4393c3','#2166ac']
+
+        let thresholds = divergingDomain.slice(1, divergingDomain.length/2).reverse()
+        console.log(thresholds)
+
+        let donatedColorScale = d3.scaleThreshold()
+          .range(divergingRange.slice(divergingDomain.length/2))
+          .domain(thresholds)
+
+        let receivedColorScale = d3.scaleThreshold()
+          .range(divergingRange.slice(0, divergingDomain.length/2).reverse())
+          .domain(thresholds)
+
+        let projection = d3.geoNaturalEarth1()
+        projection
+          .scale(300)
+          .translate([bodyWidth/2, bodyHeight/2 + margin.top])
+
+        store.mapProjection = projection
+
+
+        let path = d3.geoPath()
+          .projection(projection)
+
+
+        container.selectAll('path')
+          .data(geoJSON.features)
+          .enter()
+          .append('path')
+          .attr('d', d => path(d))
+          .attr('stroke', '#bdbdbd')
+          .attr('fill', function(d) {
+            country = countries[d.properties.name]
+            if (country) {
+              let netValue = country.donated_amount - country.received_amount
+              if (netValue >= 0)
+                return donatedColorScale(netValue)
+              else if (netValue < 0)
+                return receivedColorScale(-netValue)
+            } else {
+              return '#fafafa';
+            }
+          })
+      }
+
+      loadData().then(showData)
+    </script>
+</html>
